@@ -6,11 +6,56 @@ import {
   DrawerItem,
   useDrawerStatus
 } from '@react-navigation/drawer';
+import {
+  I18nManager,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 
 import DrawerHeader from './headers/DrawerHeader';
 import styles from './headers/styles';
 import { ERouteName } from '../typings';
 import translationData from 'config/locales.json';
+
+import i18n from "i18n-js";
+import memoize from "lodash.memoize";
+import * as RNLocalize from "react-native-localize";
+
+const translationGetters = {
+  // lazy requires
+  en: () => require("config/en.json"),
+  fn: () => require("config/fn.json"),
+};
+
+const translate = memoize(
+  (key, config) => i18n.t(key, config),
+  (key, config) => (config ? key + JSON.stringify(config) : key),
+);
+
+const setI18nConfig = () => {
+  // fallback if no available language fits
+  const fallback = { languageTag: "en", isRTL: false };
+
+  const { languageTag, isRTL } =
+    "fn" ||
+    fallback;
+
+  // clear translation cache
+  translate.cache.clear();
+  // update layout direction
+  I18nManager.forceRTL(isRTL);
+
+  // set i18n-js config
+  i18n.translations = {
+    [languageTag]: translationGetters[languageTag](),
+  };
+
+  i18n.locale = languageTag;
+};
+
+
 
 type navigationType =  "Home" | "LibraryCard" | "RoutePlanners" | "Visit" | 
 "Enquiries" | "TrimbleFeedBack" | "KouvolaJoukkoliikenne" | "Events" |  "Feedback"
@@ -26,6 +71,8 @@ const navigationData: {name: navigationType, route: ERouteName}[] = [
   {name: "Events", route: ERouteName.EVENTS},
   {name: "Feedback", route: ERouteName.FEEDBACK},
 ]
+
+var lang = "fn";
 
 const createDrawerContent = (navigation: any) => {  
   return navigationData.map(({name, route}: {name: navigationType, route: ERouteName}) => {
@@ -60,11 +107,18 @@ const generateOnItemPressHandler =
   };
 
   const generateItemLabels = (item: navigationType): JSX.Element => {
-    const externalApp = (item === "TrimbleFeedBack" || item=== "KouvolaJoukkoliikenne")
-    const labelText = (externalApp) ? translationData.Labels.finnish.ExternalApps[item] 
-      : translationData.Labels.finnish.Navigation[item]
-    const accessibilityText = (externalApp) ? translationData.Accessibility.finnish.ExternalApps[item] 
-      : translationData.Accessibility.finnish.Navigation[item]
+    var externalApp = (item === "TrimbleFeedBack" || item=== "KouvolaJoukkoliikenne")
+    var labelText = (externalApp) ? translate(item)
+      : translate(item)
+    var accessibilityText = (externalApp) ? translate(item)
+      : translate(item)
+
+      if(lang == "en") {
+          labelText = (externalApp) ? translationData.Labels.english.ExternalApps[item]
+            : translationData.Labels.english.Navigation[item]
+          accessibilityText = (externalApp) ? translationData.Accessibility.english.ExternalApps[item]
+            : translationData.Accessibility.english.Navigation[item]
+      }
   
     return (
       <Text style={styles.headerLabel} accessibilityLabel={accessibilityText}>{labelText}</Text>
